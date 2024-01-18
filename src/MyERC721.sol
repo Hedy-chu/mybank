@@ -11,7 +11,7 @@ contract MyERC721 is Ownable,ERC721URIStorage,Nonces{
     constructor () ERC721("MyErc721", "MY721")Ownable(msg.sender){
     }
 
-    function mint(address to) public{
+    function mint(address to) public onlyOwner{
         uint256 tokenId = nonces(address(this));
         _mint(to, tokenId);
         _useNonce(address(this));
@@ -19,5 +19,9 @@ contract MyERC721 is Ownable,ERC721URIStorage,Nonces{
     
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public  {
         _setTokenURI(tokenId, _tokenURI);
+    }
+
+    function currentTokenId() public view returns(uint){
+        return nonces(address(this)) -1;
     }
 }

@@ -43,7 +43,6 @@ contract NFTMarket is Ownable,IERC721Receiver{
         if (onSale[tokenId]){
             revert onSaled();
         }
-        
         nft.safeTransferFrom(msg.sender,address(this),tokenId);
         nft.approve(msg.sender,tokenId);
         listNft[tokenId][msg.sender] = price;
