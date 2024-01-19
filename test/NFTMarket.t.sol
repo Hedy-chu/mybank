@@ -108,5 +108,14 @@ contract NFTMarketTest is Test {
     //     vm.expectRevert(NFTMarket.notOnSale.selector);
     // }
 
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_mintNft(uint amount) public{
+        vm.assume(amount >0 && amount < 10 ether);
+        test_mint(alice);
+        test_list(alice, erc721.currentTokenId(), amount);
+        test_tokenTransfer(admin,hedy,10 ether);
+        test_buyNft(hedy,erc721.currentTokenId(),amount);
+    }
+
 
 }
