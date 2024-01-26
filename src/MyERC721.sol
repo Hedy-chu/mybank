@@ -24,4 +24,10 @@ contract MyERC721 is Ownable,ERC721URIStorage,Nonces{
     function currentTokenId() public view returns(uint){
         return nonces(address(this)) -1;
     }
+
+    function getNftBalance(address user) public view returns(uint256){
+        return balanceOf(user);
+    }
+
+
 }

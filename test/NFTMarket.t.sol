@@ -92,6 +92,7 @@ contract NFTMarketTest is Test {
         test_mint(alice);
         test_list(alice, erc721.currentTokenId(), 10000);
         test_tokenTransfer(admin,hedy,10 ether);
+        console.log("hedy address",hedy);
         test_buyNft(hedy,erc721.currentTokenId(),10000);
     }
 

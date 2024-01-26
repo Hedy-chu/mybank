@@ -22,6 +22,11 @@ contract MyTokenCallBack is ERC20,Ownable{
         _mint(msg.sender,100000*10**18);
     }
 
+    /**
+     * 转入钱之后直接存款
+     * @param to bank合约
+     * @param amount 存款金额
+     */
     function transfer(address to, uint256 amount) public override  returns (bool)  {
         uint balance = balanceOf(msg.sender);
         require(balance >= amount, "balance not enough");
@@ -40,7 +45,12 @@ contract MyTokenCallBack is ERC20,Ownable{
        
     }
 
-    
+    /**
+     * 收到转账后直接调nftMarket的购买方法
+     * @param to nftMarket
+     * @param amount 价格
+     * @param data tokenId+buyer
+     */
     function transferForBuyNft(address to, uint256 amount, bytes calldata data) public returns (bool)  {
         uint balance = balanceOf(msg.sender);
         require(balance >= amount, "balance not enough");
@@ -59,5 +69,9 @@ contract MyTokenCallBack is ERC20,Ownable{
 
     function mint(address to, uint256 value) public onlyOwner{
         _mint(to, value);
+    }
+
+    function getBalance(address user) public view returns(uint256){
+        return balanceOf(user);
     }
 }
