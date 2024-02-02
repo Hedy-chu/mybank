@@ -1,51 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.3;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/Nonces.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 /**
- * @title NftMarketV2版本，新增离线上线
+ * @title NftMarketV4版本  用于测试
  */
 interface IMyERC721 {
     function safeTransferFrom(address from, address to, uint256 tokenId) external ; 
     function approve(address to, uint256 tokenId) external;
     function getApproved(uint256 tokenId) external view returns (address);
-    function ownerOf(uint256 tokenId) external view returns (address);
+    function ownerOf(uint256 tokenId) external view  returns (address);
+    function offlineApprove(address to,uint256 tokenId, uint256 price, uint8 v, bytes32 r, bytes32 s) external returns(bool);
 }
-contract NFTMarketV2 is OwnableUpgradeable, IERC721Receiver, EIP712Upgradeable, NoncesUpgradeable {
+contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
     bytes32 private constant _PERMIT_TYPEHASH = keccak256("Storage(address allowUser,uint256 nonce)");
     IMyERC721 public nft;
     IERC20 public token;
     using SafeERC20 for IERC20;
-    mapping (uint => mapping (address=> uint)) public listNft; //tokenId => address =>price
+    mapping (uint => mapping (address=> uint)) public listNft;
     mapping (uint => bool) public onSale; 
 
     error notOnSale();
-    error hasBeBuyError();
     error priceError();
     error onSaled();
     event listToken(address user, uint256 tokenId, uint256 price );
     event buy(address user, uint256 tokenId, uint256 amount );
     event buyWithWL(address user, uint256 tokenId, uint256 amount );
-
-    // bytes32 private constant _BUYBYSIG_TYPEHASH = keccak256("BuyBySig(uint256 tokenId,uint256 price,uint256 nonce)");
+    event buyBySig(address user, uint256 tokenId, uint256 amount );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address nftAddr,address tokenAddr) initializer public {
-        __EIP712_init("NFTMarket","1");
-        __Ownable_init(msg.sender);
+    constructor(address nftAddr,address tokenAddr,string memory name,string memory version) 
+    EIP712(name,version)Ownable(msg.sender){
         nft = IMyERC721(nftAddr);
         token = IERC20(tokenAddr);
-        
     }
 
     modifier checkPrice(uint price){
@@ -124,14 +118,12 @@ contract NFTMarketV2 is OwnableUpgradeable, IERC721Receiver, EIP712Upgradeable, 
     function buyNftWithWL(uint tokenId, uint amount,uint8 v, bytes32 r, bytes32 s) public {
         permit(msg.sender, v, r, s);
         buyNft(tokenId,amount);
+        emit buyWithWL(msg.sender, tokenId, amount );
     }
     
     /**
      * 验签方法
      * @param allowUser 给谁授权
-     * @param v v
-     * @param r r
-     * @param s s
      */
     function permit(address allowUser, uint8 v, bytes32 r, bytes32 s) internal returns(bool){
 
@@ -143,18 +135,19 @@ contract NFTMarketV2 is OwnableUpgradeable, IERC721Receiver, EIP712Upgradeable, 
         return owner() == signer;
     }
 
-    //     /**
-    //  * 卖家离线签名上架后，卖家带着签名来购买
-    //  * @param tokenId tokenId
-    //  * @param price 签名时的价格
-    //  */
-    // function buyBySig(uint256 tokenId,uint256 price, uint8 v, bytes32 r, bytes32 s) public {
-    //     bytes32 structHash = keccak256(abi.encode(_BUYBYSIG_TYPEHASH, tokenId,price, _useNonce(msg.sender)));
-
-    //     bytes32 hash = _hashTypedDataV4(structHash);
-    //     address signer = ECDSA.recover(hash, v, r, s);
-    //     address ownerOf = nft.ownerOf(tokenId);
-    //     require(ownerOf == signer, "BuyBySig: invalid signature");
-    //     buyNft(tokenId,price); 
-    // }
+    /**
+     * 卖家离线签名上架后，卖家带着签名来购买
+     * @param tokenId tokenId
+     * @param price 签名时的价格
+     */
+    function buyNftBySig(uint256 tokenId,uint256 price, uint8 v, bytes32 r, bytes32 s) public {
+        bool result = nft.offlineApprove(address(this),tokenId,price,v,r,s);
+        console.log("result:",result);
+        require(result,"error sign");
+        address nftOwner = nft.ownerOf(tokenId);
+        console.log("nftOwner:",nftOwner);
+        token.safeTransferFrom(msg.sender,nftOwner,price);
+        nft.safeTransferFrom(nftOwner,msg.sender,tokenId);
+        emit buyBySig(msg.sender, tokenId, price);
+    }
 }
