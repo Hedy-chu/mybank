@@ -2,7 +2,7 @@
 pragma solidity ^0.8.1;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract MyToken{
+contract MyToken {
     using SafeERC20 for MyToken;
     string public _name;
     string public _symbol;
@@ -18,7 +18,7 @@ contract MyToken{
     error balanceNoEnough();
     error allowanceNoEnough();
 
-    constructor(string memory name, string memory symbol) {
+    constructor(string memory name, string memory symbol){
         _name = name;
         _symbol = symbol;
         _owner = msg.sender;

@@ -13,4 +13,8 @@ contract Counter {
     function increment() public {
         number++;
     }
+
+    function test1(uint a) public {
+        uint b = a;
+    }
 }

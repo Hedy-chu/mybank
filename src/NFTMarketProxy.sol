@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/StorageSlot.sol";
 
 /**
- * @title 自己写的，nftmarket代理合约，透明代理不用写
+ * @title 自己写的，nftmarket代理合约，透明代理不用自己写，部署的时候直接给出代理合约地址
  */
 contract NFTMarketProxy is Initializable{
     

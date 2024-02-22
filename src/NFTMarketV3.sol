@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 /**
- * @title NftMarketV3版本 新增签名
+ * @title NftMarketV3版本 新增签名 透明代理逻辑合约 version2
  */
 interface IMyERC721 {
     function safeTransferFrom(address from, address to, uint256 tokenId) external ; 
@@ -149,7 +149,6 @@ contract NFTMarketV3 is OwnableUpgradeable, IERC721Receiver, EIP712Upgradeable, 
     function buyNftBySig(uint256 tokenId,uint256 price, uint8 v, bytes32 r, bytes32 s) public {
         
         bool result = nft.offlineApprove(address(this),tokenId,price,v,r,s);
-        // console.log("result:",result);
         require(result,"error sign");
         address nftOwner = nft.ownerOf(tokenId);
         console.log("nftOwner:",nftOwner);

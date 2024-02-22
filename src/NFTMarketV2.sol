@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 
 /**
- * @title NftMarketV2版本，新增离线上线
+ * @title NftMarketV2版本，新增离线上线，透明代理逻辑合约 version1
  */
 interface IMyERC721 {
     function safeTransferFrom(address from, address to, uint256 tokenId) external ; 
@@ -142,19 +142,4 @@ contract NFTMarketV2 is OwnableUpgradeable, IERC721Receiver, EIP712Upgradeable, 
         require(owner() == signer, "Permit: invalid signature");
         return owner() == signer;
     }
-
-    //     /**
-    //  * 卖家离线签名上架后，卖家带着签名来购买
-    //  * @param tokenId tokenId
-    //  * @param price 签名时的价格
-    //  */
-    // function buyBySig(uint256 tokenId,uint256 price, uint8 v, bytes32 r, bytes32 s) public {
-    //     bytes32 structHash = keccak256(abi.encode(_BUYBYSIG_TYPEHASH, tokenId,price, _useNonce(msg.sender)));
-
-    //     bytes32 hash = _hashTypedDataV4(structHash);
-    //     address signer = ECDSA.recover(hash, v, r, s);
-    //     address ownerOf = nft.ownerOf(tokenId);
-    //     require(ownerOf == signer, "BuyBySig: invalid signature");
-    //     buyNft(tokenId,price); 
-    // }
 }

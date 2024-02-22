@@ -5,6 +5,7 @@ import "./MyToken.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 interface ITokenBankV1 {
     function tokensReceived(address user, uint amount) external  returns (bool);
@@ -14,11 +15,11 @@ interface INftMarket {
     function tokensReceived(address user, uint amount, bytes calldata data) external returns (bool);
 }
 
-contract MyTokenCallBack is ERC20,Ownable{
+contract MyTokenCallBack is ERC20,Ownable,ERC20Permit{
     error callBackError();
     error codeError();
 
-    constructor() ERC20("MyToken","MYT") Ownable(msg.sender){
+    constructor() ERC20("MyToken","MYT") Ownable(msg.sender) ERC20Permit("MyToken"){
         _mint(msg.sender,100000*10**18);
     }
 

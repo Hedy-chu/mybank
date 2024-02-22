@@ -5,7 +5,6 @@ import {Test, console} from "forge-std/Test.sol";
 import {MyTokenCallBack} from "../src/MyTokenCallBack.sol";
 import {MyERC721} from "../src/MyERC721.sol";
 import {NFTMarketV4} from "../src/NFTMarketV4.sol";
-import "../src/SigUtils.sol";
 
 contract NFTMarketProxyTest is Test{
     // TransparentUpgradeableProxy proxy;
@@ -15,7 +14,6 @@ contract NFTMarketProxyTest is Test{
     MyTokenCallBack myToken;
     MyERC721 erc721;
     NFTMarketV4 market;
-    SigUtils sigUtils;
     uint256 privateKey;
     address alice ;
     address admin = makeAddr("admin");
