@@ -27,6 +27,7 @@ contract AirdopMerkleNFTMarketTest is Test {
     bytes32[] proof;
 
     AirdopMerkleNFTMarket.Call[] public calls;
+    bytes[] public data;
 
     function setUp() public{
         (alice, aliceKey) = makeAddrAndKey("alice");
@@ -63,7 +64,7 @@ contract AirdopMerkleNFTMarketTest is Test {
             )); 
             console.logBytes32(digest);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
-            market.permitPrePay(address(alice),1000,1740123868000,v,r,s);
+            market.permitPrePay(1000,1740123868000,v,r,s);
         }
     }
 
@@ -76,7 +77,7 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.stopPrank();
         vm.startPrank(alice);
         {
-            market.claimNFT(address(alice),0,1000,leaf,proof);
+            market.claimNFT(0,1000,leaf,proof);
         }
         vm.stopPrank();
     }
@@ -86,6 +87,9 @@ contract AirdopMerkleNFTMarketTest is Test {
         test_claimNFT();
     }
 
+    /**
+     * 测试自己写的multicall
+     */
     function test_mutiCall() public {
         deal(address(token), alice, 100000);
         vm.startPrank(admin);
@@ -114,7 +118,37 @@ contract AirdopMerkleNFTMarketTest is Test {
                     callData: abi.encodeWithSignature("claimNFT(address,uint256,uint256,bytes32,bytes32[])",address(alice),0,1000,leaf,proof)}
             ));
             market.aggregate(calls);
-            asssertEq(nft.ownerOf(0), alice);
+            require(nft.ownerOf(0) == alice,"error");
+            vm.stopPrank();
+        }
+    }
+
+    /**
+     * 测试openzeppelin的multicall
+     */
+    function test_mutiCall_one() public  {
+        deal(address(token), alice, 100000);
+        vm.startPrank(admin);
+        {
+            nft.mint(admin);
+            nft.approve(address(market),0);
+        }
+        vm.stopPrank();
+        vm.startPrank(alice);
+        {
+            bytes32 digest = keccak256(abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH, address(alice), market, 1000, token.nonces(address(alice)),1740123868000))
+            )); 
+            console.logBytes32(digest);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
+            data.push(abi.encodeWithSignature("permitPrePay(uint256,uint256,uint8,bytes32,bytes32)",1000,1740123868000,v,r,s));
+            data.push(abi.encodeWithSignature("claimNFT(uint256,uint256,bytes32,bytes32[])",0,1000,leaf,proof));
+
+            market.multicall(data);
+            assertTrue(token.balanceOf(alice) == 99000);
+            assertTrue(nft.ownerOf(0) == alice);
             vm.stopPrank();
         }
     }
