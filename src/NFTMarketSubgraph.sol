@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.3;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/Nonces.sol";
 
 /**
- * @title NftMarketV2版本，新增离线上线，透明代理逻辑合约 version1
+ * @title the graph实现可以查询nft owner
  */
 interface IMyERC721 {
     function safeTransferFrom(
@@ -25,38 +25,28 @@ interface IMyERC721 {
     function ownerOf(uint256 tokenId) external view returns (address);
 }
 
-contract NFTMarketV2 is
-    OwnableUpgradeable,
-    IERC721Receiver,
-    EIP712Upgradeable,
-    NoncesUpgradeable
-{
+contract NFTMarketSubgraph is Ownable, IERC721Receiver, EIP712, Nonces {
     bytes32 private constant _PERMIT_TYPEHASH =
         keccak256("Storage(address allowUser,uint256 nonce)");
     IMyERC721 public nft;
     IERC20 public token;
     using SafeERC20 for IERC20;
-    mapping(uint => mapping(address => uint)) public listNft; //tokenId => address =>price
+    mapping(uint => uint) public listPrice; //tokenId =>price
     mapping(uint => bool) public onSale;
+    mapping(uint => address) public nftOwner; // tokenId => address
 
     error notOnSale();
     error hasBeBuyError();
     error priceError();
     error onSaled();
     event listToken(address user, uint256 tokenId, uint256 price);
-    event buy(address user, uint256 tokenId, uint256 amount);
+    event buy(address seller, address buyer, uint256 tokenId, uint256 amount);
     event buyWithWL(address user, uint256 tokenId, uint256 amount);
 
-    // bytes32 private constant _BUYBYSIG_TYPEHASH = keccak256("BuyBySig(uint256 tokenId,uint256 price,uint256 nonce)");
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address nftAddr, address tokenAddr) public initializer {
-        __EIP712_init("NFTMarket", "1");
-        __Ownable_init(msg.sender);
+    constructor(
+        address nftAddr,
+        address tokenAddr
+    ) Ownable(msg.sender) EIP712("NFTMarket", "1") {
         nft = IMyERC721(nftAddr);
         token = IERC20(tokenAddr);
     }
@@ -87,7 +77,8 @@ contract NFTMarketV2 is
         }
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
         nft.approve(msg.sender, tokenId);
-        listNft[tokenId][msg.sender] = price;
+        listPrice[tokenId] = price;
+        nftOwner[tokenId] = msg.sender;
         onSale[tokenId] = true;
         emit listToken(msg.sender, tokenId, price);
     }
@@ -102,13 +93,13 @@ contract NFTMarketV2 is
         if (!onSale[tokenId]) {
             revert notOnSale();
         }
-        if (amount < listNft[tokenId][msg.sender]) {
+        if (amount < listPrice[tokenId]) {
             revert priceError();
         }
         token.safeTransferFrom(msg.sender, address(this), amount);
         nft.safeTransferFrom(address(this), msg.sender, tokenId);
         onSale[tokenId] = false;
-        emit buy(msg.sender, tokenId, amount);
+        emit buy(nftOwner[tokenId], msg.sender, tokenId, amount);
     }
 
     /**
@@ -127,7 +118,7 @@ contract NFTMarketV2 is
         if (!onSale[tokenId]) {
             revert notOnSale();
         }
-        if (amount < listNft[tokenId][approved]) {
+        if (amount < listPrice[tokenId]) {
             revert priceError();
         }
         nft.safeTransferFrom(address(this), buyer, tokenId);
@@ -153,9 +144,6 @@ contract NFTMarketV2 is
     /**
      * 验签方法
      * @param allowUser 给谁授权
-     * @param v v
-     * @param r r
-     * @param s s
      */
     function permit(
         address allowUser,

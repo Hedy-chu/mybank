@@ -13,36 +13,57 @@ import {Test, console} from "forge-std/Test.sol";
  * @title NftMarketV4版本  用于测试
  */
 interface IMyERC721 {
-    function safeTransferFrom(address from, address to, uint256 tokenId) external ; 
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) external;
+
     function approve(address to, uint256 tokenId) external;
+
     function getApproved(uint256 tokenId) external view returns (address);
-    function ownerOf(uint256 tokenId) external view  returns (address);
-    function offlineApprove(address to,uint256 tokenId, uint256 price, uint8 v, bytes32 r, bytes32 s) external returns(bool);
+
+    function ownerOf(uint256 tokenId) external view returns (address);
+
+    function offlineApprove(
+        address to,
+        uint256 tokenId,
+        uint256 price,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (bool);
 }
-contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
-    bytes32 private constant _PERMIT_TYPEHASH = keccak256("Storage(address allowUser,uint256 nonce)");
+
+contract NFTMarketV4 is IERC721Receiver, EIP712, Ownable, Nonces {
+    bytes32 private constant _PERMIT_TYPEHASH =
+        keccak256("Storage(address allowUser,uint256 nonce)");
     IMyERC721 public nft;
     IERC20 public token;
     using SafeERC20 for IERC20;
-    mapping (uint => mapping (address=> uint)) public listNft;
-    mapping (uint => bool) public onSale; 
+    mapping(uint => mapping(address => uint)) public listNft;
+    mapping(uint => bool) public onSale;
 
     error notOnSale();
     error priceError();
     error onSaled();
-    event listToken(address user, uint256 tokenId, uint256 price );
-    event buy(address user, uint256 tokenId, uint256 amount );
-    event buyWithWL(address user, uint256 tokenId, uint256 amount );
-    event buyBySig(address user, uint256 tokenId, uint256 amount );
+    event listToken(address user, uint256 tokenId, uint256 price);
+    event buy(address user, uint256 tokenId, uint256 amount);
+    event buyWithWL(address user, uint256 tokenId, uint256 amount);
+    event buyBySig(address user, uint256 tokenId, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address nftAddr,address tokenAddr,string memory name,string memory version) 
-    EIP712(name,version)Ownable(msg.sender){
+    constructor(
+        address nftAddr,
+        address tokenAddr,
+        string memory name,
+        string memory version
+    ) EIP712(name, version) Ownable(msg.sender) {
         nft = IMyERC721(nftAddr);
         token = IERC20(tokenAddr);
     }
 
-    modifier checkPrice(uint price){
+    modifier checkPrice(uint price) {
         require(price > 0, "price must bigger than zero");
         _;
     }
@@ -54,24 +75,25 @@ contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
         address /*operator*/,
         address /*from*/,
         uint256 /*tokenId*/,
-        bytes calldata  /*data*/
-    ) external override pure returns (bytes4) {
-      return this.onERC721Received.selector;
+        bytes calldata /*data*/
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 
     /**
      * nft上架
      */
-    function list(uint tokenId, uint price) public checkPrice(price){
-        if (onSale[tokenId]){
+    function list(uint tokenId, uint price) public checkPrice(price) {
+        if (onSale[tokenId]) {
             revert onSaled();
         }
-        nft.safeTransferFrom(msg.sender,address(this),tokenId);
-        nft.approve(msg.sender,tokenId);
+        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        nft.approve(msg.sender, tokenId);
         listNft[tokenId][msg.sender] = price;
         onSale[tokenId] = true;
         emit listToken(msg.sender, tokenId, price);
     }
+
     /**
      * 购买nft
      * @param tokenId tokenid
@@ -79,14 +101,14 @@ contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
      */
 
     function buyNft(uint tokenId, uint amount) public {
-        if (!onSale[tokenId]){
+        if (!onSale[tokenId]) {
             revert notOnSale();
         }
-        if (amount < listNft[tokenId][msg.sender]){
+        if (amount < listNft[tokenId][msg.sender]) {
             revert priceError();
         }
-        token.safeTransferFrom(msg.sender,address(this),amount);
-        nft.safeTransferFrom(address(this),msg.sender,tokenId);
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        nft.safeTransferFrom(address(this), msg.sender, tokenId);
         onSale[tokenId] = false;
         emit buy(msg.sender, tokenId, amount);
     }
@@ -97,17 +119,21 @@ contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
      * @param amount 数量
      * @param data tokenId+buyer
      */
-    function tokensReceived(address user, uint amount, bytes calldata data) public returns (bool){
-        (uint256 tokenId,address buyer) = abi.decode(data,(uint256,address));
+    function tokensReceived(
+        address user,
+        uint amount,
+        bytes calldata data
+    ) public returns (bool) {
+        (uint256 tokenId, address buyer) = abi.decode(data, (uint256, address));
         address approved = nft.getApproved(tokenId);
-         if (!onSale[tokenId]){
+        if (!onSale[tokenId]) {
             revert notOnSale();
         }
-        if (amount < listNft[tokenId][approved]){
+        if (amount < listNft[tokenId][approved]) {
             revert priceError();
         }
-        nft.safeTransferFrom(address(this),buyer,tokenId);
-        token.safeTransfer(approved,amount);
+        nft.safeTransferFrom(address(this), buyer, tokenId);
+        token.safeTransfer(approved, amount);
         onSale[tokenId] = false;
         return true;
     }
@@ -115,19 +141,31 @@ contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
     /**
      * 只有有白名单的人才可以购买
      */
-    function buyNftWithWL(uint tokenId, uint amount,uint8 v, bytes32 r, bytes32 s) public {
+    function buyNftWithWL(
+        uint tokenId,
+        uint amount,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
         permit(msg.sender, v, r, s);
-        buyNft(tokenId,amount);
-        emit buyWithWL(msg.sender, tokenId, amount );
+        buyNft(tokenId, amount);
+        emit buyWithWL(msg.sender, tokenId, amount);
     }
-    
+
     /**
      * 验签方法
      * @param allowUser 给谁授权
      */
-    function permit(address allowUser, uint8 v, bytes32 r, bytes32 s) internal returns(bool){
-
-        bytes32 structHash = keccak256(abi.encode(_PERMIT_TYPEHASH, allowUser,_useNonce(msg.sender)));
+    function permit(
+        address allowUser,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal returns (bool) {
+        bytes32 structHash = keccak256(
+            abi.encode(_PERMIT_TYPEHASH, allowUser, _useNonce(msg.sender))
+        );
 
         bytes32 hash = _hashTypedDataV4(structHash);
         address signer = ECDSA.recover(hash, v, r, s);
@@ -140,14 +178,27 @@ contract NFTMarketV4 is  IERC721Receiver, EIP712, Ownable, Nonces{
      * @param tokenId tokenId
      * @param price 签名时的价格
      */
-    function buyNftBySig(uint256 tokenId,uint256 price, uint8 v, bytes32 r, bytes32 s) public {
-        bool result = nft.offlineApprove(address(this),tokenId,price,v,r,s);
-        console.log("result:",result);
-        require(result,"error sign");
+    function buyNftBySig(
+        uint256 tokenId,
+        uint256 price,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        bool result = nft.offlineApprove(
+            address(this),
+            tokenId,
+            price,
+            v,
+            r,
+            s
+        );
+        console.log("result:", result);
+        require(result, "error sign");
         address nftOwner = nft.ownerOf(tokenId);
-        console.log("nftOwner:",nftOwner);
-        token.safeTransferFrom(msg.sender,nftOwner,price);
-        nft.safeTransferFrom(nftOwner,msg.sender,tokenId);
+        console.log("nftOwner:", nftOwner);
+        token.safeTransferFrom(msg.sender, nftOwner, price);
+        nft.safeTransferFrom(nftOwner, msg.sender, tokenId);
         emit buyBySig(msg.sender, tokenId, price);
     }
 }

@@ -15,21 +15,21 @@ contract NFTMarketTest is Test {
     address alice = makeAddr("alice");
     address ben = makeAddr("ben");
     address hedy = makeAddr("hedy");
+
     /**
      * 初始化方法
      */
     function setUp() public {
-        deal(admin,10000 ether);
-        deal(hedy,10000 ether);
-        deal(alice,100 ether);
-        deal(ben,100 ether);
-        
+        deal(admin, 10000 ether);
+        deal(hedy, 10000 ether);
+        deal(alice, 100 ether);
+        deal(ben, 100 ether);
+
         vm.startPrank(admin);
         myToken = new MyTokenCallBack();
         erc721 = new MyERC721();
-        market = new NFTMarket(address(erc721),address(myToken));
+        market = new NFTMarket(address(erc721), address(myToken));
         vm.stopPrank();
-        
     }
 
     function test_Owner() public {
@@ -42,7 +42,7 @@ contract NFTMarketTest is Test {
         vm.startPrank(admin);
         {
             erc721.mint(to);
-            console.log("tokenId",erc721.currentTokenId());
+            console.log("tokenId", erc721.currentTokenId());
             address owner = erc721.ownerOf(erc721.currentTokenId());
             assertEq(erc721.ownerOf(erc721.currentTokenId()), to, "mint error");
         }
@@ -54,49 +54,67 @@ contract NFTMarketTest is Test {
         vm.startPrank(from);
         {
             erc721.approve(address(market), tokenId);
-            market.list(tokenId,amount);
-            assertEq(market.listNft(tokenId,from),amount,"list error");
-            assertTrue(erc721.ownerOf(tokenId) == address(market),"list owner error");
+            market.list(tokenId, amount);
+            assertEq(market.listNft(tokenId, from), amount, "list error");
+            assertTrue(
+                erc721.ownerOf(tokenId) == address(market),
+                "list owner error"
+            );
         }
         vm.stopPrank();
     }
-
 
     function test_tokenTransfer(address from, address to, uint amount) public {
         // token 转账
         vm.startPrank(from);
         {
             uint balanceBefore = myToken.balanceOf(to);
-            myToken.transfer(to,amount);
-            console.log("hedy balanceBefore: balance:",balanceBefore, myToken.balanceOf(to));
-            assertEq(myToken.balanceOf(to),balanceBefore + amount,"token transfer error");
+            myToken.transfer(to, amount);
+            console.log(
+                "hedy balanceBefore: balance:",
+                balanceBefore,
+                myToken.balanceOf(to)
+            );
+            assertEq(
+                myToken.balanceOf(to),
+                balanceBefore + amount,
+                "token transfer error"
+            );
         }
         vm.stopPrank();
     }
 
-    function test_buyNft(address buyer, uint tokenId, uint amount) public{
+    function test_buyNft(address buyer, uint tokenId, uint amount) public {
         // hedy buy
         vm.startPrank(buyer);
         {
             uint balanceBefore = myToken.balanceOf(alice);
-            myToken.transferForBuyNft(address(market),amount, abi.encode(tokenId,address(buyer)));
+            myToken.transferForBuyNft(
+                address(market),
+                amount,
+                abi.encode(tokenId, address(buyer))
+            );
             address newOwner = erc721.ownerOf(tokenId);
             assertEq(buyer, erc721.ownerOf(tokenId), "exchange owner error");
-            console.log("newOwner:",newOwner);
-            assertEq(myToken.balanceOf(alice), balanceBefore+amount, "transfer error");
+            console.log("newOwner:", newOwner);
+            assertEq(
+                myToken.balanceOf(alice),
+                balanceBefore + amount,
+                "transfer error"
+            );
         }
         vm.stopPrank();
     }
 
-    function test_mintNft() public{
+    function test_mintNft() public {
         test_mint(alice);
         test_list(alice, erc721.currentTokenId(), 10000);
-        test_tokenTransfer(admin,hedy,10 ether);
-        console.log("hedy address",hedy);
-        test_buyNft(hedy,erc721.currentTokenId(),10000);
+        test_tokenTransfer(admin, hedy, 10 ether);
+        console.log("hedy address", hedy);
+        test_buyNft(hedy, erc721.currentTokenId(), 10000);
     }
 
-    function test_mintOnlyOwner() public{
+    function test_mintOnlyOwner() public {
         vm.prank(admin);
         erc721.mint(alice);
 
@@ -110,14 +128,11 @@ contract NFTMarketTest is Test {
     // }
 
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_mintNft(uint amount) public{
-        vm.assume(amount >0 && amount < 10 ether);
+    function testFuzz_mintNft(uint amount) public {
+        vm.assume(amount > 0 && amount < 10 ether);
         test_mint(alice);
         test_list(alice, erc721.currentTokenId(), amount);
-        test_tokenTransfer(admin,hedy,10 ether);
-        test_buyNft(hedy,erc721.currentTokenId(),amount);
+        test_tokenTransfer(admin, hedy, 10 ether);
+        test_buyNft(hedy, erc721.currentTokenId(), amount);
     }
-
-
-
 }

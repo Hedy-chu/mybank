@@ -8,10 +8,14 @@ import {AirdopMerkleNFTMarket} from "../src/AirdopMerkleNFTMarket.sol";
 import {Counter} from "../src/Counter.sol";
 
 contract AirdopMerkleNFTMarketTest is Test {
-    bytes32 private constant TYPE_HASH = 
-    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 private constant TYPE_HASH =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
     bytes32 private constant PERMIT_TYPEHASH =
-        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
     bytes32 private DOMAIN_SEPARATOR;
     AirdopMerkleNFTMarket public market;
     MyTokenCallBack public token;
@@ -22,49 +26,71 @@ contract AirdopMerkleNFTMarketTest is Test {
     uint256 aliceKey;
     uint256 adminKey;
 
-    bytes32 root = 0xeeefd63003e0e702cb41cd0043015a6e26ddb38073cc6ffeb0ba3e808ba8c097;
-    bytes32 leaf = 0x5931b4ed56ace4c46b68524cb5bcbf4195f1bbaacbe5228fbd090546c88dd229;
+    bytes32 root =
+        0xeeefd63003e0e702cb41cd0043015a6e26ddb38073cc6ffeb0ba3e808ba8c097;
+    bytes32 leaf =
+        0x5931b4ed56ace4c46b68524cb5bcbf4195f1bbaacbe5228fbd090546c88dd229;
     bytes32[] proof;
 
     AirdopMerkleNFTMarket.Call[] public calls;
     bytes[] public data;
 
-    function setUp() public{
+    function setUp() public {
         (alice, aliceKey) = makeAddrAndKey("alice");
         (admin, adminKey) = makeAddrAndKey("admin");
         vm.startPrank(admin);
         {
             counter = new Counter();
-            token= new MyTokenCallBack();
+            token = new MyTokenCallBack();
             nft = new MyERC721();
-            market = new AirdopMerkleNFTMarket(address(nft),address(token),root);
-            DOMAIN_SEPARATOR = keccak256(abi.encode(
-                TYPE_HASH, // type hash
-                keccak256(bytes("MyToken")), // name
-                keccak256(bytes("1")), // version
-                block.chainid, // chain id
-                token // contract address
-            ));
-            proof.push(0x999bf57501565dbd2fdcea36efa2b9aef8340a8901e3459f4a4c926275d36cdb);
-            proof.push(0x4726e4102af77216b09ccd94f40daa10531c87c4d60bba7f3b3faf5ff9f19b3c);
-
+            market = new AirdopMerkleNFTMarket(
+                address(nft),
+                address(token),
+                root
+            );
+            DOMAIN_SEPARATOR = keccak256(
+                abi.encode(
+                    TYPE_HASH, // type hash
+                    keccak256(bytes("MyToken")), // name
+                    keccak256(bytes("1")), // version
+                    block.chainid, // chain id
+                    token // contract address
+                )
+            );
+            proof.push(
+                0x999bf57501565dbd2fdcea36efa2b9aef8340a8901e3459f4a4c926275d36cdb
+            );
+            proof.push(
+                0x4726e4102af77216b09ccd94f40daa10531c87c4d60bba7f3b3faf5ff9f19b3c
+            );
         }
         vm.stopPrank();
     }
 
-    function test_permit() public  {
+    function test_permit() public {
         deal(address(token), alice, 100000);
-        
+
         vm.startPrank(alice);
         {
-            bytes32 digest = keccak256(abi.encodePacked(
-                "\x19\x01",
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, address(alice), market, 1000, token.nonces(address(alice)),1740123868000))
-            )); 
+            bytes32 digest = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR,
+                    keccak256(
+                        abi.encode(
+                            PERMIT_TYPEHASH,
+                            address(alice),
+                            market,
+                            1000,
+                            token.nonces(address(alice)),
+                            1740123868000
+                        )
+                    )
+                )
+            );
             console.logBytes32(digest);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
-            market.permitPrePay(1000,1740123868000,v,r,s);
+            market.permitPrePay(1000, 1740123868000, v, r, s);
         }
     }
 
@@ -72,12 +98,12 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.startPrank(admin);
         {
             nft.mint(admin);
-            nft.approve(address(market),0);
+            nft.approve(address(market), 0);
         }
         vm.stopPrank();
         vm.startPrank(alice);
         {
-            market.claimNFT(0,1000,leaf,proof);
+            market.claimNFT(0, 1000, leaf, proof);
         }
         vm.stopPrank();
     }
@@ -95,30 +121,58 @@ contract AirdopMerkleNFTMarketTest is Test {
         vm.startPrank(admin);
         {
             nft.mint(admin);
-            nft.approve(address(market),0);
+            nft.approve(address(market), 0);
         }
         vm.stopPrank();
         vm.startPrank(alice);
         {
-            bytes32 digest = keccak256(abi.encodePacked(
-                "\x19\x01",
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, address(alice), market, 1000, token.nonces(address(alice)),1740123868000))
-            )); 
+            bytes32 digest = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR,
+                    keccak256(
+                        abi.encode(
+                            PERMIT_TYPEHASH,
+                            address(alice),
+                            market,
+                            1000,
+                            token.nonces(address(alice)),
+                            1740123868000
+                        )
+                    )
+                )
+            );
             console.logBytes32(digest);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
             calls.push(
                 AirdopMerkleNFTMarket.Call({
                     target: address(market),
-                    callData: abi.encodeWithSignature("permitPrePay(address,uint256,uint256,uint8,bytes32,bytes32)",address(alice),1000,1740123868000,v,r,s)})
+                    callData: abi.encodeWithSignature(
+                        "permitPrePay(address,uint256,uint256,uint8,bytes32,bytes32)",
+                        address(alice),
+                        1000,
+                        1740123868000,
+                        v,
+                        r,
+                        s
+                    )
+                })
             );
             calls.push(
                 AirdopMerkleNFTMarket.Call({
                     target: address(market),
-                    callData: abi.encodeWithSignature("claimNFT(address,uint256,uint256,bytes32,bytes32[])",address(alice),0,1000,leaf,proof)}
-            ));
+                    callData: abi.encodeWithSignature(
+                        "claimNFT(address,uint256,uint256,bytes32,bytes32[])",
+                        address(alice),
+                        0,
+                        1000,
+                        leaf,
+                        proof
+                    )
+                })
+            );
             market.aggregate(calls);
-            require(nft.ownerOf(0) == alice,"error");
+            require(nft.ownerOf(0) == alice, "error");
             vm.stopPrank();
         }
     }
@@ -126,25 +180,53 @@ contract AirdopMerkleNFTMarketTest is Test {
     /**
      * 测试openzeppelin的multicall
      */
-    function test_mutiCall_one() public  {
+    function test_mutiCall_one() public {
         deal(address(token), alice, 100000);
         vm.startPrank(admin);
         {
             nft.mint(admin);
-            nft.approve(address(market),0);
+            nft.approve(address(market), 0);
         }
         vm.stopPrank();
         vm.startPrank(alice);
         {
-            bytes32 digest = keccak256(abi.encodePacked(
-                "\x19\x01",
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, address(alice), market, 1000, token.nonces(address(alice)),1740123868000))
-            )); 
+            bytes32 digest = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    DOMAIN_SEPARATOR,
+                    keccak256(
+                        abi.encode(
+                            PERMIT_TYPEHASH,
+                            address(alice),
+                            market,
+                            1000,
+                            token.nonces(address(alice)),
+                            1740123868000
+                        )
+                    )
+                )
+            );
             console.logBytes32(digest);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
-            data.push(abi.encodeWithSignature("permitPrePay(uint256,uint256,uint8,bytes32,bytes32)",1000,1740123868000,v,r,s));
-            data.push(abi.encodeWithSignature("claimNFT(uint256,uint256,bytes32,bytes32[])",0,1000,leaf,proof));
+            data.push(
+                abi.encodeWithSignature(
+                    "permitPrePay(uint256,uint256,uint8,bytes32,bytes32)",
+                    1000,
+                    1740123868000,
+                    v,
+                    r,
+                    s
+                )
+            );
+            data.push(
+                abi.encodeWithSignature(
+                    "claimNFT(uint256,uint256,bytes32,bytes32[])",
+                    0,
+                    1000,
+                    leaf,
+                    proof
+                )
+            );
 
             market.multicall(data);
             assertTrue(token.balanceOf(alice) == 99000);
