@@ -53,6 +53,7 @@ contract MyERC721 is Ownable,ERC721URIStorage,Nonces,EIP712{
         console.log("signer::::",signer);
         require(_ownerOf(tokenId) == signer, "BuyBySig: invalid signature");
         // 给nftMarket全部授权
+        // _approve(signer, to, tokenId);
         _setApprovalForAll(signer, to, true);
         return true;
     }
